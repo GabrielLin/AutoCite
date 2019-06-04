@@ -540,4 +540,10 @@ def compute_sha1(filename: str, buf_size=int(1e6)) -> str:
             sha1.update(data)
     return sha1.hexdigest()
 
+class SetJsonEncoder(json.JSONEncoder):
+    """Simple JSONEncoder that encodes sets as lists."""
 
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        return json.JSONEncoder.default(self, obj)
