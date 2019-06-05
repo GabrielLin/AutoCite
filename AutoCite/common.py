@@ -60,7 +60,6 @@ class FieldNames(object):
     TITLE_RAW = "title"
     ABSTRACT_RAW = "paperAbstract"
 
-
 class DatasetPaths(object):
     BASE_DIR = os.path.abspath("./data")
 
@@ -143,3 +142,94 @@ class DatasetPaths(object):
             return self.OC_PKL_FILE
         else:
             assert False
+
+class Document(object):
+    _fields = [
+        FieldNames.TITLE,
+        FieldNames.ABSTRACT,
+        FieldNames.AUTHORS,
+        FieldNames.OUT_CITATIONS,
+        FieldNames.IN_CITATIONS,
+        FieldNames.YEAR,
+        FieldNames.PAPER_ID,
+        FieldNames.VENUE,
+        #FieldNames.IN_CITATION_COUNT,
+        #FieldNames.OUT_CITATION_COUNT,
+        FieldNames.KEY_PHRASES,
+        #FieldNames.DATE,
+        FieldNames.TITLE_RAW,
+        FieldNames.ABSTRACT_RAW,
+    ]
+
+    def __init__(
+            self,
+            title,
+            abstract,
+            authors,
+            out_citations,
+            year,
+            id: int,
+            venue,
+            in_citation_count,
+            out_citation_count,
+            key_phrases,
+            title_raw,
+            abstract_raw,
+            date=None,
+            candidate_selector_confidence=None
+
+    ):
+        self.title = title
+        self.abstract = abstract
+        self.authors = authors
+        self.out_citations = out_citations
+        self.year = year
+        self.id = id
+        self.venue = venue
+        self.in_citation_count = in_citation_count
+        self.out_citation_count = out_citation_count
+        self.key_phrases = key_phrases
+        self.date = date
+
+        self.title_raw = title_raw
+        self.abstract_raw = abstract_raw
+        self.candidate_selector_confidence = candidate_selector_confidence
+
+    def __iter__(self):
+        for k in self._fields:
+            yield getattr(self, k)
+
+    def _asdict(self):
+        return dict(**self.__dict__)
+
+    @staticmethod
+    def from_proto_doc(doc: ProtoDoc):
+        out_citations = [c for c in doc.out_citations]
+        return Document(
+            title=doc.title,
+            abstract=doc.abstract,
+            authors=[a for a in doc.authors],
+            out_citations=out_citations,
+            in_citation_count=doc.in_citation_count,
+            year=doc.year,
+            id=doc.id,
+            venue=doc.venue,
+            out_citation_count=len(out_citations),
+            key_phrases=[p for p in doc.key_phrases],
+            title_raw=doc.title_raw,
+            abstract_raw=doc.abstract_raw,
+        )
+
+
+class ModelLoader(pickle.Unpickler):
+    def find_class(self, mod_name, klass_name):
+        if mod_name[:4] == 'ai2.':
+            mod_name = mod_name[4:]
+
+        mod = importlib.import_module(mod_name)
+        return getattr(mod, klass_name)
+
+
+def load_pickle(filename):
+    with file_util.open(filename) as f:
+        return ModelLoader(f).load()
