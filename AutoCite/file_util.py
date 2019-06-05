@@ -585,3 +585,22 @@ class JsonFile(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._file.__exit__(exc_type, exc_val, exc_tb)
+
+class GzipJsonFile(JsonFile):
+    '''
+    A gzip compressed JsonFile.  Usage is the same as JsonFile
+    '''
+
+    def __enter__(self):
+        self._file = GzipFile(*self._args, **self._kwargs)
+        self._file.__enter__()
+        return self
+
+    def __iter__(self):
+        for line in self._file:
+            yield json.loads(line.decode('utf-8', 'ignore'))
+
+    def write(self, item):
+        item_as_json = json.dumps(item, ensure_ascii=False)
+        encoded = '{0}\n'.format(item_as_json).encode('utf-8', 'ignore')
+        self._file.write(encoded)
