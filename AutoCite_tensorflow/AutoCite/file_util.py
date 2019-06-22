@@ -541,3 +541,51 @@ def compute_sha1(filename: str, buf_size=int(1e6)) -> str:
     return sha1.hexdigest()
 
 
+class SetJsonEncoder(json.JSONEncoder):
+    """Simple JSONEncoder that encodes sets as lists."""
+
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        return json.JSONEncoder.default(self, obj)
+
+
+class JsonFile(object):
+    '''
+    A flat text file where each line is one json object
+
+    # to read though a file line by line
+    with JsonFile('file.json', 'r') as fin:
+        for line in fin:
+            # line is the deserialized json object
+            pass
+
+
+    # to write a file object by object
+    with JsonFile('file.json', 'w') as fout:
+        fout.write({'key1': 5, 'key2': 'token'})
+        fout.write({'key1': 0, 'key2': 'the'})
+    '''
+
+    def __init__(self, *args, **kwargs):
+        self._args = args
+        self._kwargs = kwargs
+
+    def __iter__(self):
+        for line in self._file:
+            yield json.loads(line)
+
+    def write(self, item):
+        item_as_json = json.dumps(item, ensure_ascii=False)
+        encoded = '{0}\n'.format(item_as_json)
+        self._file.write(encoded)
+
+    def __enter__(self):
+        self._file = open(*self._args, **self._kwargs)
+        self._file.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._file.__exit__(exc_type, exc_val, exc_tb)
+
+
