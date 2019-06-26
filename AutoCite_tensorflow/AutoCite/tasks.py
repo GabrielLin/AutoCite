@@ -112,4 +112,48 @@ class CreateFeaturizer(SharedParameters):
         file_util.write_pickle(self.output().path, featurizer)
 
 
+class TrainModel(SharedParameters):
+    model_config = luigi.Parameter()
+    experiment_name = luigi.Parameter(default='v0')
+
+    def requires(self):
+        return {'featurizer': CreateFeaturizer(), 'corpus': BuildCorpus()}
+
+    def output(self):
+        return luigi.LocalTarget(
+            path.join(self.model_dir, self.experiment_name, 'weights.h5')
+        )
+
+    def run(self):
+        featurizer = file_util.read_pickle(self.input()['featurizer'].path)
+        corpus = corpus.Corpus.load(self.input()['corpus'].path)
+
+        model_options = ModelOptions.load(self.model_config)
+        model_options.n_authors = featurizer.n_authors
+        model_options.n_features = featurizer.n_features
+
+        citeomatic_model, embedding_model = train_text_model(
+            corpus,
+            featurizer,
+            model_options,
+            embedding_model_for_ann=None,
+            debug=False,
+            tensorboard_dir=None
+        )
+
+        self.output().makedirs()
+        citeomatic_model.save_weights(
+            path.join(self.output().path, 'weights.h5'), overwrite=True
+        )
+
+        embedding_model.save_weights(
+            path.join(self.output().path, 'embedding.h5'), overwrite=True
+        )
+
+        file_util.write_json(
+            model_options.to_json(),
+            path.join(self.output().path, 'options.json')
+        )
+
+
 
