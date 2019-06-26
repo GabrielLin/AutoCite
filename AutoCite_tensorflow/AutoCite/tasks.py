@@ -156,4 +156,26 @@ class TrainModel(SharedParameters):
         )
 
 
+class TestModel(SharedParameters):
+    def requires(self):
+        return {
+            'featurizer': CreateFeaturizer(),
+            'corpus': DownloadCorpus(),
+            'model': TrainModel(),
+        }
 
+    def run(self):
+        from citeomatic.scripts.evaluate_citeomatic_model import \
+            TestCiteomatic
+        test_app = TestCiteomatic(
+            model_dir=self.output_dir(),
+            test_samples=self.test_samples,
+            min_citation_count=10,
+            corpus_path=self._corpus_path('corpus.msgpack'),
+            filter_method='es',
+        )
+        test_app.main([])
+
+if __name__ == '__main__':
+    from luigi.cmdline import luigi_run
+    luigi_run()
