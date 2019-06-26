@@ -85,3 +85,31 @@ class BuildCorpus(SharedParameters):
             os.system("rm -rf '%s'" % self.output().path + '.tmp')
             raise
 
+
+class CreateFeaturizer(SharedParameters):
+    training_fraction = luigi.FloatParameter(default=0.8)
+    max_features = luigi.IntParameter(default=100000000)
+    name = luigi.Parameter('default')
+
+    def requires(self):
+        return {'corpus': BuildCorpus()}
+
+    def output(self):
+        return luigi.LocalTarget(
+            path.join(self.model_dir, 'featurizer-%s.pickle' % self.name)
+        )
+
+    def run(self):
+        logger.info(
+            "Loading corpus from file %s " % self.input()['corpus'].path
+        )
+        c = corpus.Corpus.load(self.input()['corpus'].path, self.training_fraction)
+
+        logger.info("Fitting featurizer and making cache...")
+        featurizer = Featurizer(max_features=self.max_features)
+        featurizer.fit(c)
+        self.output().makedirs()
+        file_util.write_pickle(self.output().path, featurizer)
+
+
+
